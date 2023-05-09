@@ -1,1 +1,2 @@
-redo-ifchange redo links
+#!/bin/sh -e
+depend depend links

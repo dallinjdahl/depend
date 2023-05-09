@@ -2,7 +2,7 @@
    in portable C with zero dependencies
 
    http://cr.yp.to/redo.html
-   https://jdebp.eu./FGA/introduction-to-redo.html
+   https://jdebp.info/FGA/introduction-to-redo.html
    https://github.com/apenwarr/redo/blob/master/README.md
    http://news.dieweltistgarnichtso.net/bin/redo-sh.html
 
@@ -192,7 +192,7 @@ int poolwr_fd = -1;
 int poolrd_fd = -1;
 int level = -1;
 int implicit_jobs = 1;
-int kflag, jflag, xflag, fflag, sflag;
+int kflag, jflag;
 
 static void
 redo_ifcreate(int fd, char *target)
@@ -400,10 +400,7 @@ sourcefile(char *target)
 	if (access(targetdep(target), F_OK) == 0)
 		return 0;
 
-	if (fflag < 0)
-		return access(target, F_OK) == 0;
-
-	return find_dofile(target) == 0;
+	return access(target, F_OK) == 0;
 }
 
 static int
@@ -419,9 +416,6 @@ check_deps(char *target)
 
 	if (sourcefile(target))
 		return 1;
-
-	if (fflag > 0)
-		return 0;
 
 	depfile = targetdep(target);
 	f = fopen(depfile, "r");
@@ -705,17 +699,9 @@ djb-style default.o.do:
 		close(lock_fd);
 		setenvfd("REDO_DEP_FD", dep_fd);
 		setenvfd("REDO_LEVEL", level + 1);
-		if (sflag > 0)
-			dup2(target_fd, 1);
-		else
-			close(target_fd);
+		dup2(target_fd, 1);
 
-		if (access(dofile, X_OK) != 0)   // run -x files with /bin/sh
-			execl("/bin/sh", "/bin/sh", xflag > 0 ? "-ex" : "-e",
-			    dofile, rel_target, basename, temp_target, (char *)0);
-		else
-			execl(dofile,
-			    dofile, rel_target, basename, temp_target, (char *)0);
+		execl(dofile, dofile, rel_target, basename, temp_target, (char *)0);
 		vacate(implicit);
 		exit(-1);
 	} else {
@@ -933,15 +919,6 @@ main(int argc, char *argv[])
 		case 'k':
 			setenvfd("REDO_KEEP_GOING", 1);
 			break;
-		case 'x':
-			setenvfd("REDO_TRACE", 1);
-			break;
-		case 'f':
-			setenvfd("REDO_FORCE", 1);
-			break;
-		case 's':
-			setenvfd("REDO_STDOUT", 1);
-			break;
 		case 'j':
 			setenv("JOBS", optarg, 1);
 			break;
@@ -952,38 +929,23 @@ main(int argc, char *argv[])
 			}
 			break;
 		default:
-			fprintf(stderr, "usage: %s [-kfsx] [-jN] [-Cdir] [TARGETS...]\n", program);
+			fprintf(stderr, "usage: %s [-k] [-jN] [-Cdir] [TARGETS...]\n", program);
 			exit(1);
 		}
 	}
 	argc -= optind;
 	argv += optind;
 
-	fflag = envfd("REDO_FORCE");
 	kflag = envfd("REDO_KEEP_GOING");
-	xflag = envfd("REDO_TRACE");
-	sflag = envfd("REDO_STDOUT");
 
 	dir_fd = keepdir();
 
-	if (strcmp(program, "redo") == 0) {
-		char all[] = "all";
-		char *argv_def[] = { all };
-
-		if (argc == 0) {
-			argc = 1;
-			argv = argv_def;
-		}
-
-		fflag = 1;
-		redo_ifchange(argc, argv);
-		procure();
-	} else if (strcmp(program, "redo-ifchange") == 0) {
+	if (strcmp(program, "depend") == 0 || strcmp(program, "redo-ifchange") == 0) {
 		compute_uprel();
 		redo_ifchange(argc, argv);
 		record_deps(argc, argv);
 		procure();
-	} else if (strcmp(program, "redo-ifcreate") == 0) {
+	} else if (strcmp(program, "counterdepend") == 0 || strcmp(program, "redo-ifcreate") == 0) {
 		for (i = 0; i < argc; i++)
 			redo_ifcreate(dep_fd, argv[i]);
 	} else if (strcmp(program, "redo-always") == 0) {

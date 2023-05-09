@@ -2,12 +2,12 @@
 # bootstrap script
 
 (
-alias redo-ifchange=:
-set -- redo redo redo
+alias depend=:
+set -- depend depend depend
 set -ex
-. ./redo.do
+. ./depend.do
 )
 
 export PATH=$PWD:$PATH
-redo -f links
-redo -f all
+depend links
+depend all
